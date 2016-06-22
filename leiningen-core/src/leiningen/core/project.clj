@@ -782,19 +782,23 @@
              :profiles profiles))
 
 (defn- apply-profile-meta [default-meta profile]
-  (if (map? profile)
+  (if (or (map? profile) (vector? profile))
     (let [profile (vary-meta profile (fn [m] (merge default-meta m)))]
-      (if-let [scope (:pom-scope (meta profile))]
-        (with-meta
-          (update-in profile [:dependencies]
-                     (fn [deps]
-                       (map
-                        (fn [dep]
-                          (if (some #(= :scope %) dep)
-                            dep
-                            (-> dep (conj :scope) (conj (name scope)))))
-                        deps)))
-          (meta profile))
+      (cond
+        (map? profile)
+        (if-let [scope (:pom-scope (meta profile))]
+          (with-meta
+            (update-in profile [:dependencies]
+                       (fn [deps]
+                         (map
+                          (fn [dep]
+                            (if (some #(= :scope %) dep)
+                              dep
+                              (-> dep (conj :scope) (conj (name scope)))))
+                          deps)))
+            (meta profile))
+          profile)
+        (vector? profile)
         profile))
     profile))
 
